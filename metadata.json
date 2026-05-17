@@ -1,0 +1,6 @@
+{
+  "name": "Shale-Namma Pride",
+  "description": "A school transparency and pride portal for government schools in rural areas. Enables sharing daily meal updates, facility tours, and student achievements with parents in multiple languages.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}

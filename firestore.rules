@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    
+    function isEmailVerified() {
+      // Mandated by instructions: MUST check email_verified == true
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isSystemAdmin() {
+      return isSignedIn() && request.auth.token.email == 'jayanthmr67140@gmail.com' && request.auth.token.email_verified == true;
+    }
+
+    function getUserData() { 
+      let docPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docPath) ? get(docPath).data : {"role": "parent"};
+    }
+
+    function hasRole(role) { 
+      return isSignedIn() && getUserData().role == role; 
+    }
+
+    function isAdmin() { 
+      return isSystemAdmin() || hasRole('admin'); 
+    }
+
+    function isHeadmaster() { 
+      return isSystemAdmin() || hasRole('headmaster'); 
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- 1. Users Collection ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == userId 
+               && data.email is string && data.email.size() < 500
+               && data.role in ['admin', 'headmaster', 'parent']
+               && data.createdAt == request.time;
+      }
+      
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Admin can list users
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && request.auth.uid == userId 
+                    && (incoming().role == 'parent' || isSystemAdmin())
+                    && isValidUser(incoming());
+                    
+      allow update: if (isSystemAdmin() || isAdmin()) 
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['role'])
+                    && incoming().role in ['admin', 'headmaster', 'parent'];
+    }
+
+    // --- 2. Daily Meals ---
+    match /dailyMeals/{mealId} {
+      function isValidMeal(data) {
+        return data.date is string && data.date.size() == 10
+               && data.imageUrl is string && data.imageUrl.size() < 2048
+               && data.description is string && data.description.size() <= 1000
+               && data.createdAt == request.time;
+      }
+      
+      allow get, list: if true;
+      allow create: if isHeadmaster() && isValidMeal(incoming()) && isValidId(mealId);
+      allow update: if isHeadmaster() && isValidMeal(incoming()) 
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['imageUrl', 'description']);
+      allow delete: if isAdmin();
+    }
+
+    // --- 3. Facility Tour ---
+    match /facilityTour/{facilityId} {
+      function isValidFacility(data) {
+        return data.title is string && data.title.size() <= 200
+               && data.imageUrl is string && data.imageUrl.size() < 2048
+               && (data.keys().hasAny(['videoUrl']) ? data.videoUrl is string && data.videoUrl.size() < 2048 : true)
+               && data.description is string && data.description.size() <= 2000
+               && data.order is int;
+      }
+      allow get, list: if true;
+      allow create: if isHeadmaster() && isValidFacility(incoming()) && isValidId(facilityId);
+      allow update: if isHeadmaster() && isValidFacility(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'imageUrl', 'order', 'videoUrl']);
+      allow delete: if isHeadmaster();
+    }
+
+    // --- 4. Student Stars ---
+    match /studentStars/{starId} {
+      function isValidStar(data) {
+        return data.name is string && data.name.size() <= 100
+               && data.achievement is string && data.achievement.size() <= 1000
+               && data.imageUrl is string && data.imageUrl.size() < 2048
+               && data.date is string && data.date.size() <= 20
+               && data.createdAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if isHeadmaster() && isValidStar(incoming()) && isValidId(starId);
+      allow update: if isHeadmaster() && isValidStar(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'achievement', 'imageUrl', 'date']);
+      allow delete: if isHeadmaster();
+    }
+
+    // --- 5. Feedback ---
+    match /feedback/{feedbackId} {
+      function isValidFeedback(data) {
+        return data.message is string && data.message.size() <= 3000
+               && data.isAnonymous is bool
+               && data.createdAt == request.time
+               && (!data.isAnonymous ? data.userId == request.auth.uid : (data.userId == null));
+      }
+      allow create: if isEmailVerified() && isValidFeedback(incoming());
+      allow get, list: if true;
+      allow delete: if isHeadmaster();
+    }
+  }
+}

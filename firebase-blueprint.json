@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "headmaster", "parent"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "role", "email", "createdAt"]
+    },
+    "DailyMeal": {
+      "title": "Daily Meal",
+      "description": "Daily school lunch record",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "imageUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "imageUrl", "description", "createdAt"]
+    },
+    "Facility": {
+      "title": "Facility",
+      "description": "School infrastructure tour image",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["title", "imageUrl", "order"]
+    },
+    "StudentStar": {
+      "title": "Student Star",
+      "description": "Student achievement record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "achievement": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "achievement", "imageUrl", "date", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Parent feedback",
+      "type": "object",
+      "properties": {
+        "message": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "isAnonymous", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "Collection of users"
+    },
+    "dailyMeals": {
+      "schema": "DailyMeal",
+      "description": "Daily food logs"
+    },
+    "facilityTour": {
+      "schema": "Facility",
+      "description": "School facilities gallery"
+    },
+    "studentStars": {
+      "schema": "StudentStar",
+      "description": "Student of the week/month achievements"
+    },
+    "feedback": {
+      "schema": "Feedback",
+      "description": "Feedback from parents"
+    }
+  }
+}
